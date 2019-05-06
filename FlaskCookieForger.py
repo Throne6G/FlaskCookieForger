@@ -5,9 +5,8 @@ from termcolor import colored
 import base64
 
 class FlaskCookieForger:
-    def __init__(self, mode: int=2, payload: str or None=None, signer_type: str="URLSafeTimedSerializer",
-                 secret_key: str="UGhldmJoZj8gYWl2ZnZoei5wYnovcG5lcnJlZg==", salt: str="cookie-session",
-                 serializer_type: str="session_json_serializer", key_derivation: str="hmac", digest_method: str="sha1"):
+    def __init__(self, mode: int, payload: str or None, signer_type: str, secret_key: str, salt: str,
+                 serializer_type: str, key_derivation: str, digest_method: str):
         self.__payload = payload
         self.__signer  = None
         if signer_type == "URLSafeTimedSerializer":
@@ -72,6 +71,43 @@ class FlaskCookieForger:
         print(colored('[+]', 'green') + ' Result = ' + decoded_sess_payload.decode('utf-8'))
         return session_payload
 
-if __name__ == "__main__":
-    forger = FlaskCookieForger(mode=1,payload='IntcInJqYWthXCI6IFwicHJpdmV0b3NcIn0i.XNBqkA.drAJK7_DBn0q2GZnFsVl7UYv-Cg')
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('mode', help="Application mode. May be set in read, verify or forge")
+    parser.add_argument('payload', help="Depends on mode. If mode set to read or verify it's cookie that you need read"
+                                        " or verify. Otherwise it's payload for cookie.")
+    parser.add_argument('--signer_type', default='URLSafeTimedSerializer',
+                        help="Signer type you want to use. Default value is URLSafeTimedSerializer. Supported signers:"
+                             " URLSafeTimedSerializer.")
+    parser.add_argument('--secret_key', default="UGhldmJoZj8gYWl2ZnZoei5wYnovcG5lcnJlZg==",
+                        help="Secret key that the app uses to sign cookie. Default value is"
+                             " UGhldmJoZj8gYWl2ZnZoei5wYnovcG5lcnJlZg==. Note! This is " + colored('NOT', 'red') +
+                             ' the default key that normal flask app use.')
+    parser.add_argument('--salt', default='cookie-session',
+                        help="Salt used by the app to sign a cookie. Default value is 'cookie-session'.")
+    parser.add_argument('--serializer_type', default='session_json_serializer',
+                        help='Type of serializer you want to use. Default value is session_json_serializer.'
+                             ' Supported serializers: session_json_serializer.')
+    parser.add_argument('--key_derivation', default='hmac', help='Key Derivation method. Default value is hmac.')
+    parser.add_argument('--digest_method', default='sha1', help='Digest Method. Default value is sha1.')
+    args = parser.parse_args()
+    mode = None
+    payload = None
+    if args.mode == 'read' or args.mode == 'READ':
+        mode = 2
+    elif args.mode == 'verify' or args.mode == 'VERIFY':
+        mode = 1
+    elif args.mode == 'forge' or args.mode == 'FORGE':
+        mode = 0
+    else:
+        print('Supported modes: read, verify and forge')
+    payload = args.payload
+    signer_type = args.signer_type
+    secret_key = args.secret_key
+    salt = args.salt
+    serializer_type = args.serializer_type
+    key_derivation = args.key_derivation
+    digest_method = args.digest_method
+    FlaskCookieForger(mode=mode, payload=payload, signer_type=signer_type, secret_key=secret_key, salt=salt,
+                      serializer_type=serializer_type, key_derivation=key_derivation, digest_method=digest_method)
