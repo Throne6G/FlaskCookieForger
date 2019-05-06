@@ -1,5 +1,3 @@
-# encoding: utf-8
-
 import argparse
 from itsdangerous import URLSafeTimedSerializer, BadTimeSignature
 from flask.sessions import session_json_serializer
@@ -22,7 +20,7 @@ class FlaskCookieForger:
         if mode == 0:
             pass
         if mode == 1:
-            pass
+            self.verify()
         if mode == 2:
             self.read()
 
@@ -33,8 +31,27 @@ class FlaskCookieForger:
         print(colored('[-]', 'red') + ' you must give me payload')
 
 
-    def verify(self) -> str:
-        pass
+    def verify(self) -> bool:
+        print(colored('[+]', 'green') + ' Mode = reading and verify cookie')
+        if self.__payload is None:
+            print(colored('[-]', 'red') + ' For reading cookie you must specify payload')
+            exit(-1)
+        data = self.__payload.split('.')
+        if len(data) != 3:
+            print(colored('[-]', 'red') + " It doesn't look like flask cookie, example of flask cookie - " +
+                  colored('eyJyb2xlIjoiaW5mbyJ9.XJ3M3w.lE5vK4fi4o3oZtOO3RKrvFIYh2w', 'yellow'))
+            exit(-1)
+        try:
+            print('cookie = ' + colored(self.__payload, 'yellow'))
+            session_data, timestamp = self.__signer.loads(self.__payload, return_timestamp=True)
+            print('Cookie = ' + colored(session_data, 'yellow') + '\tTimestamp = ' + colored(timestamp, 'yellow'))
+            print(colored('[+]', 'green') + ' Signature is fine')
+            return True
+        except BadTimeSignature as e:
+            print(colored('[-]', 'red') + "Incorrect signature")
+            print(e.args)
+            print('Check secret key and salt, also have a look on key derivation and digest methods')
+        return False
 
     def read(self) -> str:
         print(colored('[+]', 'green') + ' Mode = reading cookie')
@@ -52,4 +69,4 @@ class FlaskCookieForger:
         return session_payload
 
 if __name__ == "__main__":
-    forger = FlaskCookieForger(payload='eyJyb2xlIjoiaW5mbyJ9.XJ3M3w.lE5vK4fi4o3oZtOO3RKrvFIYh2w')
+    forger = FlaskCookieForger(mode=1,payload='eyJyb2xlIjoiaW5mbyJ9.XJ3M3w.lE5vK4fi4o3oZtOO3RKrvFIYh2w')
