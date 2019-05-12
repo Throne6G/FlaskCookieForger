@@ -1,5 +1,5 @@
 import argparse
-from itsdangerous import URLSafeTimedSerializer, BadTimeSignature,BadSignature, URLSafeSerializer, TimedSerializer
+from itsdangerous import URLSafeTimedSerializer, BadTimeSignature,BadSignature, URLSafeSerializer, BadPayload
 from flask.sessions import session_json_serializer
 from termcolor import colored
 import base64
@@ -19,7 +19,6 @@ class FlaskCookieForger:
                                                                   'digest_method': digest_method})
         elif signer_type == "URLSafeSerializer":
             serializer = None
-            print('privetos')
             if serializer_type == "session_json_serializer":
                 serializer = session_json_serializer
             self.__signer = URLSafeSerializer(secret_key=secret_key, salt=salt, serializer=serializer,
@@ -55,7 +54,6 @@ class FlaskCookieForger:
             exit(-1)
         try:
             print('cookie = ' + colored(self.__payload, 'yellow'))
-            session_data = None
             timestamp = str(None)
             if self.__signer_type == "URLSafeSerializer":
                 session_data= self.__signer.loads(self.__payload)
@@ -64,7 +62,7 @@ class FlaskCookieForger:
             print('Cookie = ' + colored(session_data, 'yellow') + '\tTimestamp = ' + colored(timestamp, 'yellow'))
             print(colored('[+]', 'green') + ' Signature is fine')
             return True
-        except BadTimeSignature and BadSignature as e:
+        except BadTimeSignature and BadSignature and BadPayload as e:
             print(colored('[-]', 'red') + "Incorrect signature")
             print(e.args)
             print('Check secret key and salt, also have a look on key derivation and digest methods. Also,'
@@ -97,13 +95,11 @@ if __name__ == "__main__":
                              " URLSafeTimedSerializer, URLSafeSerializer, .")
     parser.add_argument('--secret_key', default="UGhldmJoZj8gYWl2ZnZoei5wYnovcG5lcnJlZg==",
                         help="Secret key that the app uses to sign cookie. Default value is"
-                             " UGhldmJoZj8gYWl2ZnZoei5wYnovcG5lcnJlZg==. Note! This is " + colored('NOT', 'red') +
-                             ' the default key that normal flask app use.')
+                             " UGhldmJoZj8gYWl2ZnZoei5wYnovcG5lcnJlZg==.")
     parser.add_argument('--salt', default='cookie-session',
                         help="Salt used by the app to sign a cookie. Default value is 'cookie-session'.")
     parser.add_argument('--serializer_type', default='session_json_serializer',
-                        help='Type of serializer you want to use. Default value is session_json_serializer.'
-                             ' Supported serializers: session_json_serializer.')
+                        help='Type of serializer you want to use. Default value is session_json_serializer.')
     parser.add_argument('--key_derivation', default='hmac', help='Key Derivation method. Default value is hmac.')
     parser.add_argument('--digest_method', default='sha1', help='Digest Method. Default value is sha1.')
     args = parser.parse_args()
