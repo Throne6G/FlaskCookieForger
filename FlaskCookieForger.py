@@ -48,7 +48,13 @@ class FlaskCookieForger:
         if self.__payload is None:
             print(colored('[-]', 'red') + ' For reading cookie you must specify payload')
             exit(-1)
-        data = self.__payload.split('.')
+        if self.__payload[0] == ".":
+            is_compressed = True
+            data = self.__payload[1:]
+        else:
+            is_compressed = False
+            data = self.__payload
+        data = data.split('.')
         if len(data) != 3 and len(data) != 2:
             print(colored('[-]', 'red') + " It doesn't look like flask cookie, example of flask cookie - " +
                   colored('eyJyb2xlIjoiaW5mbyJ9.XJ3M3w.lE5vK4fi4o3oZtOO3RKrvFIYh2w', 'yellow'))
@@ -60,10 +66,22 @@ class FlaskCookieForger:
                 session_data= self.__signer.loads(self.__payload)
             else:
                 session_data, timestamp = self.__signer.loads(self.__payload, return_timestamp=True)
+            if is_compressed:
+                session_data = zlib.decompress(session_data)
             print('Cookie = ' + colored(session_data, 'yellow') + '\tTimestamp = ' + colored(timestamp, 'yellow'))
             print(colored('[+]', 'green') + ' Signature is fine')
             return True
-        except BadTimeSignature and BadSignature and BadPayload as e:
+        except BadTimeSignature as e:
+            print(colored('[-]', 'red') + "Incorrect signature")
+            print(e.args)
+            print('Check secret key and salt, also have a look on key derivation and digest methods. Also,'
+                  ' if you use signer without timestamp check if serializer work without timestamp')
+        except BadSignature as e:
+            print(colored('[-]', 'red') + "Incorrect signature")
+            print(e.args)
+            print('Check secret key and salt, also have a look on key derivation and digest methods. Also,'
+                  ' if you use signer without timestamp check if serializer work without timestamp')
+        except BadPayload as e:
             print(colored('[-]', 'red') + "Incorrect signature")
             print(e.args)
             print('Check secret key and salt, also have a look on key derivation and digest methods. Also,'
