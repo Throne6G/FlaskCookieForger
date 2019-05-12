@@ -3,6 +3,7 @@ from itsdangerous import URLSafeTimedSerializer, BadTimeSignature,BadSignature, 
 from flask.sessions import session_json_serializer
 from termcolor import colored
 import base64
+import zlib
 
 class FlaskCookieForger:
     def __init__(self, mode: int, payload: str or None, signer_type: str, secret_key: str, salt: str,
@@ -74,13 +75,21 @@ class FlaskCookieForger:
         if self.__payload is None:
             print(colored('[-]', 'red') + ' For reading cookie you must specify payload')
             exit(-1)
-        data = self.__payload.split('.')
-        if len(data) != 3:
+        if self.__payload[0] == ".":
+            is_compressed = True
+            data = self.__payload[1:]
+        else:
+            is_compressed = False
+            data = self.__payload
+        data = data.split('.')
+        if len(data) != 3 and len(data) != 2:
             print(colored('[-]', 'red') + " It doesn't look like flask cookie, example of flask cookie - " +
                   colored('eyJyb2xlIjoiaW5mbyJ9.XJ3M3w.lE5vK4fi4o3oZtOO3RKrvFIYh2w', 'yellow'))
             exit(-1)
         session_payload = data[0]
         decoded_sess_payload = base64.urlsafe_b64decode(session_payload)
+        if is_compressed:
+            decoded_sess_payload = zlib.decompress(decoded_sess_payload)
         print(colored('[+]', 'green') + ' Result = ' + decoded_sess_payload.decode('utf-8'))
         return session_payload
 
